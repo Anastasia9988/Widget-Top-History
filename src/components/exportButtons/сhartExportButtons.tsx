@@ -1,4 +1,5 @@
 import React, { useCallback } from 'react';
+import './chartExportButtons.css'
 
 interface ChartExportButtonsProps {
     chartRef: React.RefObject<any>;
@@ -43,9 +44,19 @@ const ChartExportButtons: React.FC<ChartExportButtonsProps> = ({ chartRef, label
     }, [labels, datasets]);
 
     return (
-        <div>
-            <button onClick={handleExportPNG}>Экспорт в PNG</button>
-            <button onClick={handleExportCSV}>Экспорт в CSV</button>
+        <div className="chart-export-buttons">
+            <button
+                className="chart-export-btn"
+                onClick={handleExportPNG}
+            >
+                Экспорт в PNG
+            </button>
+            <button
+                className="chart-export-btn"
+                onClick={handleExportCSV}
+            >
+                Экспорт в CSV
+            </button>
         </div>
     );
 };

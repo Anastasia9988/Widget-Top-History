@@ -1,6 +1,4 @@
-// src/components/MyChart.tsx
-
-import React, { useEffect } from 'react'
+import React, { useEffect, useRef, useMemo } from 'react'
 import {
     Chart as ChartJS,
     CategoryScale,
@@ -12,9 +10,12 @@ import {
     Legend,
 } from 'chart.js'
 import { Line } from 'react-chartjs-2'
-import { useAppDispatch, useAppSelector } from '../redux/hooks'
-import { loadHistory } from '../redux/slices/historySlice'
-import SUBCATEGORY_NAMES from '../utils/subNames'
+import { useAppDispatch, useAppSelector } from "../../redux/hooks";
+import { loadHistory } from "../../redux/slices/historySlice";
+import SUBCATEGORY_NAMES from "../../utils/subNames";
+import { getColorByIndex } from '../../utils/colors';
+import ChartExportButtons from "../exportButtons/сhartExportButtons";
+
 
 ChartJS.register(
     CategoryScale,
@@ -33,65 +34,61 @@ export interface MyChartProps {
     categoryIds: number[]
 }
 
-export function MyChart({
+export default function MyChart({
                             countryId,
                             dateFrom,
                             dateTo,
                             categoryIds,
                         }: MyChartProps) {
-    const dispatch = useAppDispatch()
-    const { raw, status, error } = useAppSelector(state => state.history)
-    const { items: categories } = useAppSelector(state => state.categories)
+    // --- Хуки ---
+    const dispatch = useAppDispatch();
+    const { raw, status, error } = useAppSelector(state => state.history);
+    const { items: categories } = useAppSelector(state => state.categories);
+    const chartRef = useRef<any>(null);
 
     useEffect(() => {
         if (countryId && dateFrom && dateTo && categoryIds.length > 0) {
             dispatch(loadHistory({ countryId, dateFrom, dateTo }))
         }
-    }, [dispatch, countryId, dateFrom, dateTo, categoryIds])
+    }, [dispatch, countryId, dateFrom, dateTo, categoryIds]);
 
-    if (!countryId || categoryIds.length === 0) {
-        return <div>Выберите хотя бы одну категорию</div>
-    }
+    // --- Мемоизированные вычисления для графика ---
+    const filteredRaw = useMemo(() => {
+        if (!raw) return {};
+        return Object.fromEntries(
+            Object.entries(raw).filter(([categoryId]) => categoryIds.includes(Number(categoryId)))
+        );
+    }, [raw, categoryIds]);
 
-    if (status === 'loading') return <div>Загрузка графика…</div>
-    if (status === 'failed')  return <div>Ошибка: {error}</div>
-    if (!raw || Object.keys(raw).length === 0)
-        return <div>Нет данных за выбранный период</div>
+    const labels = useMemo(() => {
+        return Array.from(
+            new Set(
+                Object.values(filteredRaw)
+                    .flatMap(bySub => Object.values(bySub))
+                    .flatMap(series => Object.keys(series))
+            )
+        ).sort();
+    }, [filteredRaw]);
 
-    // --- Фильтрация raw только по выбранным категориям ---
-    const filteredRaw = Object.fromEntries(
-        Object.entries(raw).filter(([categoryId]) => categoryIds.includes(Number(categoryId)))
-    )
+    const categoryNameMap = useMemo(() => (
+        Object.fromEntries(categories.map(category => [String(category.id), category.name]))
+    ), [categories]);
 
-    if (!filteredRaw || Object.keys(filteredRaw).length === 0)
-        return <div>Нет данных для выбранных категорий</div>
-
-    // Собираем все уникальные даты для оси X
-    const labels = Array.from(
-        new Set(
-            Object.values(filteredRaw)
-                .flatMap(bySub => Object.values(bySub))
-                .flatMap(series => Object.keys(series))
-        )
-    ).sort()
-
-    // Для быстрого поиска имени категории
-    const categoryNameMap: Record<string, string> = Object.fromEntries(
-        categories.map(category => [String(category.id), category.name])
-    )
-
-    // Собираем массив уникальных пар (категория, сабкатегория)
-    const allCategorySubPairs: Array<{ categoryId: string, subCategoryId: string }> = []
-    for (const categoryId in filteredRaw) {
-        const bySubCategory = filteredRaw[categoryId]
-        for (const subCategoryId in bySubCategory) {
-            allCategorySubPairs.push({ categoryId, subCategoryId })
+    const allCategorySubPairs = useMemo(() => {
+        const pairs: Array<{ categoryId: string, subCategoryId: string }> = [];
+        for (const categoryId in filteredRaw) {
+            const bySubCategory = filteredRaw[categoryId];
+            for (const subCategoryId in bySubCategory) {
+                pairs.push({ categoryId, subCategoryId });
+            }
         }
-    }
+        return pairs;
+    }, [filteredRaw]);
 
-    // Формируем datasets для каждой пары (категория, сабкатегория)
-    const datasets = allCategorySubPairs.map(({ categoryId, subCategoryId }) => {
-        const series = filteredRaw[categoryId][subCategoryId] || {}
+    const datasets = useMemo(() => allCategorySubPairs.map(({ categoryId, subCategoryId }, index) => {
+        const series = filteredRaw[categoryId][subCategoryId] || {};
+
+        const color = getColorByIndex(index);
 
         return {
             label:
@@ -99,48 +96,71 @@ export function MyChart({
                 ' / ' +
                 (SUBCATEGORY_NAMES[subCategoryId] || `#${subCategoryId}`),
             data: labels.map(date => series[date] ?? 0),
-            borderWidth: 2,
-            pointRadius: 3,
-            pointHoverRadius: 6,
+            borderWidth: 1.5,
+            pointRadius: 2,
+            pointHoverRadius: 5,
             fill: false,
             spanGaps: true,
-        }
-    })
+            borderColor: color,
+            backgroundColor: color,
+            pointBackgroundColor: color,
+            pointBorderColor: color,
+        };
+    }), [allCategorySubPairs, filteredRaw, labels, categoryNameMap]);
 
+    if (!countryId || categoryIds.length === 0) {
+        return <div>Выберите хотя бы одну категорию</div>
+    }
+    if (status === 'loading') return <div>Загрузка графика…</div>
+    if (status === 'failed')  return <div>Ошибка: {error}</div>
+    if (!raw || Object.keys(raw).length === 0)
+        return <div>Нет данных за выбранный период</div>
+    if (!filteredRaw || Object.keys(filteredRaw).length === 0)
+        return <div>Нет данных для выбранных категорий</div>
     if (labels.length === 0 || datasets.length === 0)
         return <div>Нет точек для построения графика</div>
 
     return (
-        <div style={{ height: 400, minWidth: 375 }}>
-            <Line
-                data={{ labels, datasets }}
-                options={{
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        title: { display: true, text: 'Top History by Category & Subcategory' },
-                        legend: { position: 'bottom' },
-                        tooltip: { mode: 'index', intersect: false },
-                    },
-                    interaction: {
-                        mode: 'nearest',
-                        axis: 'x',
-                        intersect: false,
-                    },
-                    scales: {
-                        x: {
-                            title: { display: true, text: 'Дата' },
-                            ticks: { maxRotation: 45, minRotation: 45 },
-                        },
-                        y: {
-                            title: { display: true, text: 'Значение' },
-                            beginAtZero: true,
-                        },
-                    },
-                }}
+        <div>
+            <ChartExportButtons
+                chartRef={chartRef}
+                labels={labels}
+                datasets={datasets.map(ds => ({
+                    label: ds.label,
+                    data: ds.data,
+                }))}
             />
+            <div style={{ height: 400 }}>
+                <Line
+                    ref={chartRef}
+                    data={{ labels, datasets }}
+                    options={{
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            title: { display: true, text: 'Top History by Category & Subcategory' },
+                            legend: { position: 'bottom' },
+                            tooltip: { mode: 'index', intersect: false },
+                        },
+                        interaction: {
+                            mode: 'nearest',
+                            axis: 'x',
+                            intersect: false,
+                        },
+                        scales: {
+                            x: {
+                                title: { display: true, text: 'Дата' },
+                                ticks: { maxRotation: 45, minRotation: 45 },
+                            },
+                            y: {
+                                title: { display: true, text: 'Значение' },
+                                beginAtZero: true,
+                            },
+                        },
+                    }}
+                />
+            </div>
         </div>
-    )
+    );
 }
 
-export default MyChart

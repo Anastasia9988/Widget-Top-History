@@ -1,9 +1,9 @@
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
-import { MyChart } from './myChart';
-import { GeoItem, loadGeo } from '../redux/slices/geoSlice';
-import { useAppDispatch, useAppSelector } from '../redux/hooks';
-import { loadCategories } from "../redux/slices/categoriesSlice";
-import './widget.css';
+import React, { useCallback, useEffect, useState } from "react";
+import { useAppDispatch, useAppSelector } from "../../redux/hooks";
+import { loadCategories } from "../../redux/slices/categoriesSlice";
+import { GeoItem, loadGeo } from "../../redux/slices/geoSlice";
+import './widget.css'
+import MyChart from "../myChart/myChart";
 
 const CategoriesCheckboxList = React.memo(function CategoriesCheckboxList({
                                                                               categories,
@@ -68,10 +68,10 @@ export default function Widget() {
     const { items: categories, status: catsStatus } = useAppSelector(s => s.categories)
     const { items: countries, status: geoStatus } = useAppSelector(s => s.geo);
 
-    const today = useMemo(() => new Date(), []);
-    const last30 = useMemo(() => new Date(today.getTime() - 1000 * 60 * 60 * 24 * 30), [today]);
-    const isoToday = useMemo(() => today.toISOString().slice(0, 10), [today]);
-    const isoLast30 = useMemo(() => last30.toISOString().slice(0, 10), [last30]);
+    const today = new Date();
+    const last30 = new Date(today.getTime() - 1000 * 60 * 60 * 24 * 30);
+    const isoToday = today.toISOString().slice(0, 10);
+    const isoLast30 = last30.toISOString().slice(0, 10);
 
     const [countryId, setCountryId] = useState<string>('');
     const [dateFrom, setDateFrom] = useState<string>(isoLast30);
@@ -84,7 +84,6 @@ export default function Widget() {
         dispatch(loadCategories());
     }, [dispatch]);
 
-    // Инициализация чекбоксов только один раз
     useEffect(() => {
         if (
             catsStatus === 'idle' &&
@@ -97,16 +96,11 @@ export default function Widget() {
         }
     }, [catsStatus, categories, selectedCategoryIds.length, wasInitialized]);
 
-    // Установить первую страну по умолчанию
     useEffect(() => {
         if (geoStatus === 'idle' && countries.length > 0 && !countryId) {
             setCountryId(String(countries[0].id));
         }
     }, [geoStatus, countries, countryId]);
-
-    // Мемоизация
-    const categoriesMemo = useMemo(() => categories, [categories]);
-    const selectedCategoryIdsMemo = useMemo(() => selectedCategoryIds, [selectedCategoryIds]);
 
     const handleCategoryChange = useCallback((newIds: number[]) => {
         setSelectedCategoryIds(newIds);
@@ -120,6 +114,7 @@ export default function Widget() {
                     <div>Loading countries…</div>
                 ) : (
                     <select
+                        className="date-input"
                         value={countryId}
                         onChange={e => setCountryId(e.target.value)}
                     >
@@ -134,6 +129,7 @@ export default function Widget() {
                     From:{' '}
                     <input
                         type="date"
+                        className="date-input"
                         value={dateFrom}
                         max={isoToday}
                         onChange={e => setDateFrom(e.target.value)}
@@ -143,6 +139,7 @@ export default function Widget() {
                     To:{' '}
                     <input
                         type="date"
+                        className="date-input"
                         value={dateTo}
                         max={isoToday}
                         onChange={e => setDateTo(e.target.value)}
@@ -150,8 +147,8 @@ export default function Widget() {
                 </label>
             </div>
             <CategoriesCheckboxList
-                categories={categoriesMemo}
-                selectedCategoryIds={selectedCategoryIdsMemo}
+                categories={categories}
+                selectedCategoryIds={selectedCategoryIds}
                 onChange={handleCategoryChange}
             />
             {countryId && (
