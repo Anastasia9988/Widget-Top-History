@@ -1,0 +1,40 @@
+.widget-container {
+    padding: 20px;
+}
+
+.widget-header {
+    margin-bottom: 24px;
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+.select-row {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.categories-block {
+    margin-bottom: 16px;
+}
+
+.categories-title {
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+.categories-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.category-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 1rem;
+    user-select: none;
+}

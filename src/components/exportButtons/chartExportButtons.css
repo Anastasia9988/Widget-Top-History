@@ -1,0 +1,38 @@
+.chart-export-buttons {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+}
+
+.chart-export-btn {
+    padding: 7px 20px;
+    font-size: 1rem;
+    border: none;
+    border-radius: 7px;
+    background: linear-gradient(90deg, #70a1ff 0%, #47bfff 100%);
+    color: #fff;
+    font-weight: 500;
+    cursor: pointer;
+    box-shadow: 0 1px 7px #e0eaff70;
+    transition: background 0.18s, box-shadow 0.18s, transform 0.15s;
+    outline: none;
+    letter-spacing: 0.03em;
+}
+.chart-export-btn:hover,
+.chart-export-btn:focus {
+    background: linear-gradient(90deg, #5395f7 0%, #229cff 100%);
+    box-shadow: 0 3px 14px #b6d5ff90;
+    transform: translateY(-2px) scale(1.03);
+}
+@media (max-width: 430px) {
+    .chart-export-buttons {
+        gap: 8px;
+    }
+    .chart-export-btn {
+        width: 100%;
+        min-width: 0;
+        padding: 10px 0;
+        font-size: 0.97rem;
+    }
+}
